@@ -2,14 +2,24 @@ import pandas as pd
 from sqlalchemy import create_engine
 import os
 import re
+from dotenv import load_dotenv
 
-DATABASE_URL = "postgresql://user:password@localhost:5433/ames_housing"
+load_dotenv() # reads .env file
+
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASSWORD")
+DB_HOST=os.getenv("DB_HOST")
+DB_PORT=os.getenv("DB_PORT")
+DB_NAME=os.getenv("DB_NAME")
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 def upload_raw_data():
     csv_path = "data/raw/AmesHousing.csv"
     
     if not os.path.exists(csv_path):
         print(f"Error: {csv_path} not found.")
+        print("Please download the AmesHousing.csv and place it in the 'data/raw/' folder.")
         return
 
     try:
