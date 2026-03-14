@@ -5,3 +5,5 @@ scikit-learn
 psycopg2-binary
 sqlalchemy
 python-dotenv
+matplotlib
+seaborn
