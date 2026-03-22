@@ -4,35 +4,47 @@ import os
 import re
 from dotenv import load_dotenv
 
-load_dotenv() # reads .env file
+load_dotenv()
 
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASSWORD")
-DB_HOST=os.getenv("DB_HOST")
-DB_PORT=os.getenv("DB_PORT")
-DB_NAME=os.getenv("DB_NAME")
+def get_engine():
+    db_user = os.getenv("DB_USER")
+    db_pass = os.getenv("DB_PASSWORD")
+    db_host = os.getenv("DB_HOST")
+    db_port = os.getenv("DB_PORT")
+    db_name = os.getenv("DB_NAME")
+    
+    db_url = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    return create_engine(db_url)
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+def upload_data_to_db(df, table_name, if_exists='replace'):
+    """
+    Uploads a DataFrame to the database and ensures the connection is closed properly.
+    This prevents database locking issues (deadlocks).
+    """
+    engine = get_engine()
+    try:
+        df.to_sql(table_name, engine, if_exists=if_exists, index=False, chunksize=1000)
+        print(f"Success: Data uploaded to table '{table_name}'.")
+    except Exception as e:
+        print(f"An error occurred during the upload process: {e}")
+    finally:
+        engine.dispose()
+        print("Database connection closed successfully.")
 
-def upload_raw_data():
+def run_raw_upload():
+    """
+    Main function to clean the raw CSV data and push it to the database.
+    """
     csv_path = "data/raw/AmesHousing.csv"
     
     if not os.path.exists(csv_path):
-        print(f"Error: {csv_path} not found.")
-        print("Please download the AmesHousing.csv and place it in the 'data/raw/' folder.")
+        print(f"Error: Could not find the file at {csv_path}. Please check the path.")
         return
 
-    try:
-        engine = create_engine(DATABASE_URL)
-        df = pd.read_csv(csv_path)
-        
-        df.columns = [re.sub(r'[/ ]', '_', c.lower()) for c in df.columns]
-        
-        df.to_sql('raw_housing_data', engine, if_exists='replace', index=False, chunksize=500)
-        
-        print("Success: Data has been uploaded to the PostgreSQL database.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+    df = pd.read_csv(csv_path)
+    df.columns = [re.sub(r'[/ ]', '_', c.lower()) for c in df.columns]
+    
+    upload_data_to_db(df, 'raw_housing_data')
 
 if __name__ == "__main__":
-    upload_raw_data()
+    run_raw_upload()
